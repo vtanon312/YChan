@@ -8,7 +8,7 @@ YChan is a free image downloader. It supports multithreading and auto-rechecking
 
 Supported Websites: 8chan.co / [8ch.net](http://8ch.net/) and [4chan.org](http://4chan.org/)
 
-YChan requieres .NET Framework 4.5 or higher.
+YChan requieres .NET Framework 4.8 or higher.
 
 ## This Fork
 * Fixes the HTML page downloader on 4chan.    
