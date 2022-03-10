@@ -143,7 +143,8 @@ namespace YChan
             {
                 while (File.Exists(filedir) && !FileSameMd5(url.md5, filedir))
                 {
-                    filedir = dir + "\\" + "_"+fileName;
+                    fileName = "_" + fileName;
+                    filedir = dir + "\\" + fileName;
                 }
 
                 if (!File.Exists(filedir))
