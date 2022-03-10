@@ -16,24 +16,31 @@
  ************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows.Forms;
 
-namespace YChan {
-    static class Program {
+namespace YChan
+{
+    internal static class Program
+    {
         public static frmMain MainFrame;
+
         /// <summary>
         /// Main thread exception handler
         /// </summary>
         /// <param name="sender">sender</param>
         /// <param name="e">event</param>
-        public static void Application_ThreadException(object sender, System.Threading.ThreadExceptionEventArgs e) {
-            General.setSettings(General.path, General.timer, General.loadHTML, true, General.minimizeToTray, General.warnOnClose);
-            try {
-                General.writeURLs(MainFrame.clBoards, MainFrame.clThreads);
-            } catch(Exception eX) {
+        public static void Application_ThreadException(object sender, System.Threading.ThreadExceptionEventArgs e)
+        {
+            Properties.Settings.Default.saveOnClose = true;
+            Properties.Settings.Default.Save();
+            try
+            {
+                General.WriteURLs(MainFrame.ListBoards, MainFrame.ListThreads);
+            }
+            catch (Exception eX)
+            {
                 MessageBox.Show(eX.Message);
             }
         }
@@ -43,29 +50,85 @@ namespace YChan {
         /// </summary>
         /// <param name="sender">sender</param>
         /// <param name="e">event</param>
-        public static void AppDomain_UnhandledException(object sender, System.UnhandledExceptionEventArgs e) {
-            General.setSettings(General.path, General.timer, General.loadHTML, true, General.minimizeToTray, General.warnOnClose);
-            try {
-                General.writeURLs(MainFrame.clBoards, MainFrame.clThreads);
-            } catch(Exception eX) {
+        public static void AppDomain_UnhandledException(object sender, System.UnhandledExceptionEventArgs e)
+        {
+            Properties.Settings.Default.saveOnClose = true;
+            Properties.Settings.Default.Save();
+            try
+            {
+                General.WriteURLs(MainFrame.ListBoards, MainFrame.ListThreads);
+            }
+            catch (Exception eX)
+            {
                 MessageBox.Show(eX.Message);
             }
         }
 
         /// <summary>
-        /// Der Haupteinstiegspunkt für die Anwendung.
+        /// The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main() {    
-            // Unhandled exceptions for our Application Domain
-            AppDomain.CurrentDomain.UnhandledException += new System.UnhandledExceptionEventHandler(AppDomain_UnhandledException);
+        private static void Main(string[] args)
+        {
+            if (Properties.Settings.Default.UpdateSettings)
+            {
+                Properties.Settings.Default.Upgrade();
+                Properties.Settings.Default.UpdateSettings = false;
+                Properties.Settings.Default.Save();
+            }
 
-            // Unhandled exceptions for the executing UI thread
-            Application.ThreadException += new System.Threading.ThreadExceptionEventHandler(Application_ThreadException);
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            MainFrame = new frmMain();
-            Application.Run(MainFrame);
+            // See if an instance is already running...
+            // Code from https://stackoverflow.com/a/1777704 by Matt Davis (https://stackoverflow.com/users/51170/matt-davis)
+            if (_single.WaitOne(TimeSpan.Zero, true))
+            {
+                // Unhandled exceptions for our Application Domain
+                AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(AppDomain_UnhandledException);
+
+                // Unhandled exceptions for the executing UI thread
+                Application.ThreadException += new ThreadExceptionEventHandler(Application_ThreadException);
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+
+                try
+                {
+                    MainFrame = new frmMain(args);
+                    Application.Run(MainFrame);
+                }
+                catch
+                {
+                    // handle exception accordingly
+                }
+                finally
+                {
+                    _single.ReleaseMutex();
+                }
+            }
+            else
+            {
+                // Yes...Bring existing instance to top and activate it.
+                NativeMethods.PostMessage(
+                    (IntPtr)HWND_BROADCAST,
+                    WM_MY_MSG,
+                    new IntPtr(0xCDCD),
+                    new IntPtr(0xEFEF));
+            }
         }
+
+        #region Dll Imports
+
+        private const int HWND_BROADCAST = 0xFFFF;
+        public static readonly int WM_MY_MSG = NativeMethods.RegisterWindowMessage("WM_MY_MSG");
+        private static Mutex _single = new Mutex(true, "YChanRunning");
+
+        private class NativeMethods
+        {
+            [DllImport("user32")]
+            public static extern bool PostMessage(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam);
+
+            [DllImport("user32", CharSet = CharSet.Unicode)]
+            public static extern int RegisterWindowMessage(string message);
+        }
+
+        #endregion Dll Imports
     }
 }
