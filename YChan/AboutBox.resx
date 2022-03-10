@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -117,4 +117,10 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="richTextBoxDescription.Text" xml:space="preserve">
+    <value>Original Project https://sourceforge.net/p/ychan/
+Created by mirage (mirage@secure-mail.biz)
+Icon by karan000 (creator of XChan)
+Context Menu Icons by Oxygen Team</value>
+  </data>
 </root>

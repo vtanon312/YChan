@@ -16,165 +16,115 @@
  ************************************************************************/
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Collections.Generic;
 using System.IO;
-using System.Xml;
-using System.Threading.Tasks;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Windows.Forms;
 
-using System.Net;
-using System.IO;
-
-namespace YChan {
-    class General {
-        public static string path  = "";                                                    // dl Path
-        public static int    timer = 0;                                                     // Timer for frmMain.scnTimer
-        public static bool   loadHTML = false;                                              // HTML download activated?
-        public static bool   firstStart = false;                                            // First start?
-        public static bool   saveOnClose = false;                                           // saveonclose activated?
-        public static bool   minimizeToTray = true;                                         // Minimize to tray activated?
-        public static bool   warnOnClose = true;                                            // Display warning before closing main window
-
-        public static string loadURLs(bool board) {                                         // read saved URLS
-            if(board && File.Exists(Application.CommonAppDataPath+"\\boards.dat"))
-                return File.ReadAllText(Application.CommonAppDataPath+"\\boards.dat");
-            else if(!board && File.Exists(Application.CommonAppDataPath+"\\threads.dat"))
-                return File.ReadAllText(Application.CommonAppDataPath+"\\threads.dat");
+namespace YChan
+{
+    internal class General
+    {
+        /// <summary>
+        /// Returns all saved threads or boards
+        /// </summary>
+        /// <param name="board">Set true to load boards, false to load threads</param>
+        /// <returns></returns>
+        public static string LoadURLs(bool board)
+        {                                         // read saved URLS
+            if (board && File.Exists(Application.CommonAppDataPath + "\\boards.dat"))
+                return File.ReadAllText(Application.CommonAppDataPath + "\\boards.dat");
+            else if (!board && File.Exists(Application.CommonAppDataPath + "\\threads.dat"))
+                return File.ReadAllText(Application.CommonAppDataPath + "\\threads.dat");
             else
                 return "";
         }
 
-        public static void writeURLs(List<Imageboard> Boards, List<Imageboard> Threads) {   // save URLS
-            string Buffer = "";
-            for(int i = 0; i < Boards.Count; i++)
-                Buffer = Buffer + Boards[i].getURL() + "\n";
-            File.WriteAllText(Application.CommonAppDataPath+"\\boards.dat", Buffer);      
-            
-            Buffer = "";
+        /// <summary>
+        /// Saves the thread and board list to disk
+        /// </summary>
+        /// <param name="Boards">List of boards</param>
+        /// <param name="Threads">List of threads</param>
+        public static void WriteURLs(List<Imageboard> Boards, List<Imageboard> Threads)
+        {
+            StringBuilder sb = new StringBuilder();
 
-            for(int i = 0; i < Threads.Count; i++)
-                Buffer = Buffer + Threads[i].getURL() + "\n";
-            File.WriteAllText(Application.CommonAppDataPath+"\\threads.dat", Buffer);
+            for (int i = 0; i < Boards.Count; i++)
+                sb.AppendLine(Boards[i].getURL());
+            File.WriteAllText(Application.CommonAppDataPath + "\\boards.dat", sb.ToString());
+
+            sb = new StringBuilder();
+
+            for (int i = 0; i < Threads.Count; i++)
+                sb.AppendLine(Threads[i].getURL());
+            File.WriteAllText(Application.CommonAppDataPath + "\\threads.dat", sb.ToString());
         }
 
-        public static bool IsDigitsOnly(string str) {                                      
-            foreach(char c in str) {
-                if(c < '0' || c > '9')
+        /// <summary>
+        /// Validates if the string only contains digits
+        /// </summary>
+        /// <param name="str">String to validate</param>
+        /// <returns></returns>
+        public static bool IsDigitsOnly(string str)
+        {
+            foreach (char c in str)
+            {
+                if (c < '0' || c > '9')
                     return false;
             }
 
             return true;
         }
 
-        public static void setSettings(string path, int time, bool HTML, bool Save, bool tray, bool closewarn) { // set settings
-            General.path = path;
-            General.timer = time;
-            General.loadHTML = HTML;
-            General.saveOnClose = Save;
-            General.minimizeToTray = tray;
-            General.warnOnClose = closewarn;
-            General.writeSettings();
+        /// <summary>
+        /// Save settings to disk
+        /// </summary>
+        /// <param name="path">Path to where the application downloads</param>
+        /// <param name="time">Thrad refresh timer in seconds</param>
+        /// <param name="loadHTML">Save HTML or not</param>
+        /// <param name="saveOnclose">Save URLs or not</param>
+        /// <param name="tray">Minimize to tray or not</param>
+        /// <param name="closeWarn">Warn before closing or not</param>
+        public static void SaveSettings(string path, int time, bool loadHTML, bool saveOnclose, bool tray, bool closeWarn)
+        {
+            Properties.Settings.Default.path = path;
+            Properties.Settings.Default.timer = time;
+            Properties.Settings.Default.loadHTML = loadHTML;
+            Properties.Settings.Default.saveOnClose = saveOnclose;
+            Properties.Settings.Default.minimizeToTray = tray;
+            Properties.Settings.Default.warnOnClose = closeWarn;
+
+            Properties.Settings.Default.Save();
         }
 
-        public static void writeSettings() {                                                    // save settings in ugly XML
-            string lines = "<?xml version=\"1.0\"?>\r\n<data>\r\n<timer>" + General.timer + "</timer>\r\n<path>" + General.path + "</path>\r\n<loadhtml>";
-            if(loadHTML)
-                lines = lines + "1";
-            else
-                lines = lines + "0";
-            lines = lines + "</loadhtml>\r\n<saveonclose>";
-            if(saveOnClose)
-                lines = lines + "1";
-            else
-                lines = lines + "0";
-            lines = lines + "</saveonclose>\r\n<minimizetotray>";
-            if(minimizeToTray)
-                lines = lines + "1";
-            else
-                lines = lines + "0";
-            lines = lines + "</minimizetotray>\r\n<warnonclose>";
-            if(warnOnClose)
-                lines = lines + "1";
-            else
-                lines = lines + "0";
-            lines = lines + "</warnonclose>\r\n</data>\r\n";
-            
-            StreamWriter file = new StreamWriter(Application.CommonAppDataPath+"\\YCHAN2.xml");
-            file.WriteLine(lines);
-            file.Close();
-        }
+        // Create a new Imageboard
+        public static Imageboard CreateNewImageboard(string url)
+        {
+            // if FChan, create FChan
+            // if 8chan, create 8chan
 
-        public static void loadSettings() {                                                 // read settings from XML
-            if(File.Exists(Application.CommonAppDataPath+"\\YCHAN2.xml")) {
-                XmlDocument doc = new XmlDocument();
-                doc.Load(Application.CommonAppDataPath+"\\YCHAN2.xml");
+            if (Fchan.urlIsThread(url))
+                return new Fchan(url, false);
+            else if (Infinitechan.urlIsThread(url))
+                return new Infinitechan(url, false);
 
-                XmlNode NodTimer    = doc.DocumentElement.SelectSingleNode("/data/timer");
-                string Time         = NodTimer.InnerText;
+            if (Fchan.urlIsBoard(url))
+                return new Fchan(url, true);
+            else if (Infinitechan.urlIsBoard(url))
+                return new Infinitechan(url, true);
 
-                XmlNode NodPath     = doc.DocumentElement.SelectSingleNode("/data/path");
-                string Path         = NodPath.InnerText;
-
-                XmlNode NodLoadhtml     = doc.DocumentElement.SelectSingleNode("/data/loadhtml");
-                bool html = (NodLoadhtml.InnerText == "1");
-
-                XmlNode NodSaveOnClose = doc.DocumentElement.SelectSingleNode("/data/saveonclose");
-                bool sav;
-                if(NodSaveOnClose == null)
-                    sav = false;
-                else
-                    sav = (NodSaveOnClose.InnerText == "1");
-
-                XmlNode NodWarnOnClose = doc.DocumentElement.SelectSingleNode("/data/warnonclose");
-                bool warn;
-                if(NodWarnOnClose == null)
-                    warn = true;
-                else
-                    warn = (NodWarnOnClose.InnerText == "1");
-
-                XmlNode NodMinimizeToTray = doc.DocumentElement.SelectSingleNode("/data/minimizetotray");
-                bool tray;
-                if(NodMinimizeToTray == null)
-                    tray = true;
-                else
-                    tray = (NodMinimizeToTray.InnerText == "1");
-
-                int iTime = 10000;
-                if(IsDigitsOnly(Time))
-                    iTime = int.Parse(Time);
-
-                General.setSettings(Path, iTime, html, sav, tray, warn);                      
-            } else {
-                firstStart = true;                                                                      // No settings file,
-                General.setSettings("C:\\", 10000, false, false, true, true);                                 // set default values
-            }
-            
-            if(!File.Exists(Application.CommonAppDataPath+"\\2.3")){                                    // Old settings file, new
-                firstStart = true;                                                                      // version, first start,
-                File.Create(Application.CommonAppDataPath+"\\2.3").Dispose();                           // create file to save version
-            }
-        }
-        public static Imageboard createNewIMB(string url, bool board) {                                 // Create a new Imageboard
-            if(!board) {
-                if(Fchan.isThread(url))                                                                 // if FChan, create FChan
-                    return new Fchan(url, board);
-                else if(Infinitechan.isThread(url))
-                    return new Infinitechan(url, board);
-            } else {
-                if(Fchan.isBoard(url))
-                    return new Fchan(url, board);                                                       // if 8chan, create 8chan
-                else if(Infinitechan.isBoard(url))
-                    return new Infinitechan(url, board);
-            }
             return null;
         }
-        private static string GetFileName(string hrefLink) {
-            string[] parts = hrefLink.Split('/');
-            string fileName = "";
 
-            if(parts.Length > 0)
+        private static string GetFileName(string hrefLink)
+        {
+            string[] parts = hrefLink.Split('/');
+            string fileName;
+
+            if (parts.Length > 0)
                 fileName = parts[parts.Length - 1];
             else
                 fileName = hrefLink;
@@ -182,25 +132,43 @@ namespace YChan {
             return fileName;
         }
 
-        public static bool dlTo(string url, string dir) {                                               // download to dir
-
-            if(!Directory.Exists(dir))
+        public static bool DownloadToDir(FileInformation url, string dir)
+        {
+            if (!Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
 
-            string FN = GetFileName(url);
-            dir = dir + "\\"+ FN;
-            try {
-                if(!File.Exists(dir)) {
+            string fileName = GetFileName(url.filename);
+            string filedir = dir + "\\" + fileName;
+            try
+            {
+                while (File.Exists(filedir) && !FileSameMd5(url.md5, filedir))
+                {
+                    filedir = dir + "\\" + "_"+fileName;
+                }
+
+                if (!File.Exists(filedir))
+                {
                     WebClient webClient = new WebClient();
- //                   MessageBox.Show(url);
-//                    MessageBox.Show(dir);
-                    webClient.DownloadFile(url, dir);
+                    webClient.DownloadFile(url.url, filedir);
                 }
                 return true;
-            } catch(WebException WebE) {
-                return false;
-                throw WebE;
             }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool FileSameMd5(string md5String, string filedir)
+        {
+            var md5 = MD5.Create();
+
+            var stream = File.OpenRead(filedir);
+            var bytes = md5.ComputeHash(stream);
+            var originalFileMd5 = Convert.FromBase64String(md5String);
+            stream.Close();
+
+            return originalFileMd5.SequenceEqual(bytes);
         }
     }
 }

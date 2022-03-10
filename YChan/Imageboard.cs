@@ -15,17 +15,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/> *
  ************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Windows.Forms;
-using System.Text.RegularExpressions;
-
 /***********************************************************************************************************
  * Imageboard.cs v0.4                                                                                      *
  * abstract class to use as skeleton for the imageboard classes. all IB classes inherit from this class    *
@@ -36,45 +25,88 @@ using System.Text.RegularExpressions;
  * download    -> Download Images from Thread                                                              *
  ***********************************************************************************************************/
 
+namespace YChan
+{
+    public class FileInformation
+    {
+        public string url;
+        public string filename;
+        public string md5;
 
-namespace YChan {
-    public class Imageboard {
+        public FileInformation(string url_, string filename_, string md5_)
+        {
+            this.url = url_;
+            this.filename = filename_;
+            this.md5 = md5_;
+         }
+        public FileInformation(string url_)
+        {
+            this.url = url_;
+            this.filename = url_;
+            this.md5 = "0";
+        }
+    }
+    public abstract class Imageboard
+    {
         protected string URL;                            // Thread/Board URL
         protected string SaveTo;                         // Path to save to
         protected string imName;                         // Name of the IB
-        protected bool Board;                            // Flag to distinguish Boards and Threads of an IB
-        protected bool Gone = false;                     // Flag for 404 
+        protected bool board;                            // Flag to distinguish Boards and Threads of an IB
+        protected bool Gone = false;                     // Flag for 404
 
-
-        public Imageboard(string url, bool isBoard) {    // Constructor, setting URL and Type (Board/Thread)
-            this.URL       = url;
-            this.Board     = isBoard;
+        // Constructor, setting URL and Type (Board/Thread)
+        public Imageboard(string url, bool isBoard)
+        {
+            this.URL = url;
+            this.board = isBoard;
         }
 
-        public bool isGone() {
+        public bool isGone()
+        {
             return this.Gone;
         }
 
-        public string getURL() {
-            return this.URL;        
+        public string getURL()
+        {
+            return this.URL;
         }
 
-        public string getImName() {
+        public string getImName()
+        {
             return this.imName;
         }
-        public string getPath() {
+
+        public string getPath()
+        {
             return this.SaveTo;
         }
 
-        static public bool isThread(string url) {
+        static public bool urlIsThread(string url)
+        {
             return false;
         }
 
-        static public bool isBoard(string url)  {
+        static public bool urlIsBoard(string url)
+        {
             return false;
         }
-        virtual public void         download()          {}
-        virtual protected string    getLinks()          { return ""; }
-        virtual public string       getThreads()        { return ""; }
+
+        public bool isBoard()
+        {
+            return board;
+        }
+
+        public abstract void download();
+
+        public abstract void download(object callback);
+
+        protected abstract FileInformation[] getLinks();
+
+        public abstract string[] getThreads();
+
+        public override string ToString()
+        {
+            return this.URL;
+        }
     }
 }
